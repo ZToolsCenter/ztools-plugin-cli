@@ -20,5 +20,5 @@ window.services = {
     const filePath = path.join(window.ztools.getPath('downloads'), Date.now().toString() + '.' + matchs[1])
     fs.writeFileSync(filePath, base64Url.substring(matchs[0].length), { encoding: 'base64' })
     return filePath
-  }
+  }  
 }

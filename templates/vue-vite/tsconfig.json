@@ -15,5 +15,5 @@
     "noImplicitAny": false,
     "types": ["@ztools-center/ztools-api-types"]
   },
-  "include": ["src"]
+  "include": ["src", "public/preload"]
 }

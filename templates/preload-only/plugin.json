@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
+  "pluginName": "{{PLUGIN_NAME}}",
+  "description": "{{DESCRIPTION}}",
+  "author": "{{AUTHOR}}",
+  "version": "1.0.0",
+  "preload": "dist/preload.js",
+  "logo": "logo.png",
+  "features": [
+    {
+      "code": "hello",
+      "explain": "示例功能",
+      "cmds": ["hello", "你好"]
+    }
+  ]
+}

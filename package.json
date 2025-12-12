@@ -1,0 +1,43 @@
+{
+  "name": "@ztools-center/plugin-cli",
+  "version": "1.0.0",
+  "description": "快速创建 ZTools 插件项目",
+  "type": "module",
+  "bin": {
+    "ztools": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ztools",
+    "plugin",
+    "cli",
+    "template",
+    "typescript"
+  ],
+  "author": "ZTools Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZToolsCenter/ZTools.git",
+    "directory": "ztools-plugin-cli"
+  },
+  "dependencies": {
+    "prompts": "^2.4.2",
+    "kolorist": "^1.8.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prompts": "^2.4.9",
+    "@types/minimist": "^1.2.5",
+    "typescript": "^5.3.0"
+  }
+}

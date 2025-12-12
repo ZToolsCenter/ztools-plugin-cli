@@ -7,7 +7,7 @@ declare module '*.vue' {
   export default component
 }
 
-// Preload services 类型声明
+// Preload services 类型声明（对应 public/preload/services.js）
 interface Services {
   readFile: (file: string) => string
   writeTextFile: (text: string) => string

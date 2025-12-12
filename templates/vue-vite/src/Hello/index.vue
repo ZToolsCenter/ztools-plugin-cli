@@ -13,7 +13,8 @@ defineProps({
     <h2>插件应用进入参数</h2>
     <pre>
         {{ JSON.stringify(enterAction, undefined, 2) }}
-      </pre>
+      </pre
+    >
   </div>
 </template>
 

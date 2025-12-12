@@ -41,10 +41,7 @@ export function copyDir(src: string, dest: string): void {
 /**
  * 替换文件中的模板变量
  */
-export function replaceTemplateVars(
-  filePath: string,
-  vars: Record<string, string>
-): void {
+export function replaceTemplateVars(filePath: string, vars: Record<string, string>): void {
   let content = fs.readFileSync(filePath, 'utf-8')
 
   for (const [key, value] of Object.entries(vars)) {
@@ -58,10 +55,7 @@ export function replaceTemplateVars(
 /**
  * 递归替换目录中所有文件的模板变量
  */
-export function replaceTemplateVarsInDir(
-  dir: string,
-  vars: Record<string, string>
-): void {
+export function replaceTemplateVarsInDir(dir: string, vars: Record<string, string>): void {
   const files = fs.readdirSync(dir)
 
   for (const file of files) {

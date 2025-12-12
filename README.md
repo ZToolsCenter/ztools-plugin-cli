@@ -1,11 +1,11 @@
-# ztools-cli
+# @ztools-center/plugin-cli
 
 快速创建 ZTools 插件项目的命令行工具
 
 ## 安装
 
 ```bash
-npm install -g ztools-cli
+npm install -g @ztools-center/plugin-cli
 ```
 
 ## 使用
@@ -14,8 +14,8 @@ npm install -g ztools-cli
 # 创建新插件项目
 ztools create my-plugin
 
-# 或使用 npx
-npx ztools-cli create my-plugin
+# 或使用 npx（无需全局安装）
+npx @ztools-center/plugin-cli create my-plugin
 ```
 
 ## 模板

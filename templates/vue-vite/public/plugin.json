@@ -14,13 +14,13 @@
     {
       "code": "hello",
       "explain": "这是插件应用的第一个功能",
-      "icon": "👋",
+      "icon": "logo.png",
       "cmds": ["你好", "hello"]
     },
     {
       "code": "read",
       "explain": "功能指令+匹配指令示例，使用 node.js 能力读文件",
-      "icon": "📖",
+      "icon": "logo.png",
       "cmds": [
         "读文件",
         {
@@ -34,7 +34,7 @@
     {
       "code": "write",
       "explain": "匹配指令示例，使用 node.js 能力写文件",
-      "icon": "💾",
+      "icon": "logo.png",
       "mainHide": true,
       "cmds": [
         {

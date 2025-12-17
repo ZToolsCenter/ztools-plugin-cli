@@ -334,7 +334,7 @@ npm install -D eslint-plugin-react eslint-plugin-react-hooks
 
 ### Q: 如何调试插件？
 
-A: 使用 `npm run dev` 启动开发服务器，在 ZTools 中打开开发者工具（F12）进行调试。
+A: 使用 `npm run dev` 启动开发服务器，在插件界面中点击插件头像图标，在弹出的菜单中选择"打开开发者工具"进行调试。
 
 ### Q: 如何访问 Node.js 能力？
 

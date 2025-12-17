@@ -11,7 +11,7 @@ export default function Read({ enterAction }: ReadProps) {
   const [error, setError] = useState('')
 
   const handleOpenDialog = () => {
-    // 通过 zTools 的 api 打开文件选择窗口
+    // 通过 ZTools 的 api 打开文件选择窗口
     const files = window.ztools.showOpenDialog({
       title: '选择文件',
       properties: ['openFile']

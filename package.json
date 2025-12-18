@@ -1,6 +1,6 @@
 {
   "name": "@ztools-center/plugin-cli",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "快速创建 ZTools 插件项目",
   "type": "module",
   "bin": {
@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [
     "ztools",

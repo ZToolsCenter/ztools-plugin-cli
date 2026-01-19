@@ -7,7 +7,8 @@ export interface TemplateConfig {
 export interface ProjectOptions {
   projectName: string
   template: string
-  pluginName: string
+  pluginName: string // 插件 ID（只允许小写字母、数字和连字符）
+  pluginTitle: string // 插件显示名称（无限制）
   description: string
   author: string
 }
@@ -42,8 +43,8 @@ export interface GitHubFork {
 }
 
 export interface PluginConfig {
-  name: string
-  pluginName: string
+  name: string // 插件 ID（只允许小写字母、数字和连字符）
+  title?: string // 插件显示名称（可选，无限制）
   description: string
   author: string
   version: string

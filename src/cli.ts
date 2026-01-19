@@ -77,9 +77,22 @@ export async function create(projectName?: string): Promise<void> {
       {
         type: 'text',
         name: 'pluginName',
-        message: 'Plugin name (displayed in ZTools):',
+        message: 'Plugin ID (lowercase letters, numbers, and hyphens only):',
+        initial: projectName!,
+        validate: (value) => {
+          if (!value) return 'Plugin ID is required'
+          if (!/^[a-z][a-z0-9-]*[a-z0-9]$/.test(value)) {
+            return 'Plugin ID must start with a letter, contain only lowercase letters, numbers, and hyphens, and end with a letter or number'
+          }
+          return true
+        }
+      },
+      {
+        type: 'text',
+        name: 'pluginTitle',
+        message: 'Plugin title (displayed in ZTools):',
         initial: projectName!.replace(/-/g, ' '),
-        validate: (value) => (value ? true : 'Plugin name is required')
+        validate: (value) => (value ? true : 'Plugin title is required')
       },
       {
         type: 'text',
@@ -95,7 +108,7 @@ export async function create(projectName?: string): Promise<void> {
       }
     ])
 
-    if (!pluginInfo.pluginName) {
+    if (!pluginInfo.pluginName || !pluginInfo.pluginTitle) {
       console.log(red('✖ Operation cancelled'))
       process.exit(0)
     }
@@ -105,6 +118,7 @@ export async function create(projectName?: string): Promise<void> {
       projectName: projectName!,
       template: result.template,
       pluginName: pluginInfo.pluginName,
+      pluginTitle: pluginInfo.pluginTitle,
       description: pluginInfo.description || 'A ZTools plugin',
       author: pluginInfo.author || 'Your Name'
     })

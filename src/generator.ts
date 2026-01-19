@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
  * 生成项目
  */
 export async function generateProject(options: ProjectOptions): Promise<void> {
-  const { projectName, template, pluginName, description, author } = options
+  const { projectName, template, pluginName, pluginTitle, description, author } = options
 
   // 获取模板目录
   const templateDir = path.resolve(__dirname, '../templates', template)
@@ -33,6 +33,7 @@ export async function generateProject(options: ProjectOptions): Promise<void> {
   const vars = {
     PROJECT_NAME: projectName,
     PLUGIN_NAME: pluginName,
+    PLUGIN_TITLE: pluginTitle,
     DESCRIPTION: description,
     AUTHOR: author
   }

@@ -1,8 +1,8 @@
-import { execSync, exec } from 'node:child_process'
+import { cyan, green, red, yellow } from 'kolorist'
+import { exec, execSync } from 'node:child_process'
 import fs from 'node:fs'
-import path from 'node:path'
 import os from 'node:os'
-import { green, red, cyan, yellow } from 'kolorist'
+import path from 'node:path'
 import type { CommitInfo } from './types.js'
 
 const ZTOOLS_CONFIG_DIR = path.join(os.homedir(), '.config', 'ztools')
@@ -19,7 +19,11 @@ function execGit(command: string, cwd?: string): string {
       stdio: ['pipe', 'pipe', 'pipe']
     }).trim()
   } catch (error: any) {
-    throw new Error(`Git命令执行失败: ${command}\n${error.message}`)
+    // 包含 stderr 和 stdout 的完整错误信息
+    const stderr = error.stderr?.toString() || ''
+    const stdout = error.stdout?.toString() || ''
+    const details = stderr || stdout || error.message
+    throw new Error(`Git命令执行失败: ${command}\n${details}`)
   }
 }
 
@@ -109,6 +113,7 @@ export function getCommitHistory(dir: string = process.cwd()): CommitInfo[] {
 
 /**
  * 导出某个commit的文件到目标目录
+ * 使用临时文件方式，兼容 Windows 和 Unix 系统
  */
 export function exportCommitFiles(
   commitHash: string,
@@ -121,12 +126,26 @@ export function exportCommitFiles(
       fs.mkdirSync(targetDir, { recursive: true })
     }
 
-    // 使用git archive导出文件
-    const archiveCmd = `git archive ${commitHash} | tar -x -C "${targetDir}"`
-    execSync(archiveCmd, {
-      cwd: sourceDir,
-      shell: '/bin/bash'
-    })
+    // 使用临时文件方式（跨平台兼容）
+    const tempDir = path.dirname(targetDir)
+    const tempArchive = path.join(tempDir, `.git-archive-${Date.now()}-${Math.random().toString(36).slice(2)}.tar`)
+    
+    try {
+      // 1. 导出到临时 tar 文件
+      execSync(`git archive ${commitHash} -o "${tempArchive}"`, {
+        cwd: sourceDir
+      })
+      
+      // 2. 解压 tar 文件到目标目录（Windows 10+ 和 Unix 都支持 tar 命令）
+      execSync(`tar -xf "${tempArchive}" -C "${targetDir}"`, {
+        cwd: sourceDir
+      })
+    } finally {
+      // 3. 清理临时文件
+      if (fs.existsSync(tempArchive)) {
+        fs.unlinkSync(tempArchive)
+      }
+    }
   } catch (error) {
     throw new Error(`导出commit文件失败: ${(error as Error).message}`)
   }
@@ -242,15 +261,40 @@ export async function replayCommits(
       // 添加到git
       execGit(`git add plugins/${pluginName}`, FORK_REPO_DIR)
 
+      // 检查是否有变更
+      try {
+        const status = execGit('git status --porcelain', FORK_REPO_DIR)
+        if (!status.trim()) {
+          // 没有变更，跳过此commit
+          console.log(yellow(`    ⚠ 跳过（无变更）`))
+          continue
+        }
+      } catch (error) {
+        // status 命令失败，继续尝试提交
+      }
+
       // 提交(保留原始author和date)
-      const commitCmd = `git commit --author="${commit.author}" --date="${commit.date}" -m "${commit.message.replace(/"/g, '\\"')}"`
+      // 转义 commit message 中的特殊字符
+      const escapedMessage = commit.message
+        .replace(/\\/g, '\\\\')  // 转义反斜杠
+        .replace(/"/g, '\\"')     // 转义双引号
+        .replace(/`/g, '\\`')     // 转义反引号
+        .replace(/\$/g, '\\$')    // 转义美元符号
+      
+      const commitCmd = `git commit --author="${commit.author}" --date="${commit.date}" -m "${escapedMessage}"`
       execGit(commitCmd, FORK_REPO_DIR)
     } catch (error) {
       // 如果没有变更，可能会报错，这是正常的
-      const errorMsg = (error as Error).message
-      if (!errorMsg.includes('nothing to commit')) {
-        throw new Error(`重放commit失败: ${errorMsg}`)
+      const errorMsg = (error as Error).message.toLowerCase()
+      if (
+        errorMsg.includes('nothing to commit') ||
+        errorMsg.includes('no changes added to commit') ||
+        errorMsg.includes('nothing added to commit')
+      ) {
+        console.log(yellow(`    ⚠ 跳过（无变更）`))
+        continue
       }
+      throw new Error(`重放commit失败: ${(error as Error).message}`)
     }
   }
 

@@ -1,18 +1,18 @@
+import { blue, cyan, green, red, yellow } from 'kolorist'
 import fs from 'node:fs'
 import path from 'node:path'
-import { blue, cyan, green, red, yellow } from 'kolorist'
 import { ensureAuth } from './auth.js'
-import { getCurrentUser, ensureFork, createPullRequest } from './github.js'
 import {
-  isGitRepo,
-  hasCommits,
-  getCommitHistory,
   cloneForkRepo,
   createPluginBranch,
-  replayCommits,
+  getCommitHistory,
+  hasCommits,
+  isForkRepoCloned,
+  isGitRepo,
   pushBranch,
-  isForkRepoCloned
+  replayCommits
 } from './git.js'
+import { createPullRequest, ensureFork, getCurrentUser } from './github.js'
 import type { PluginConfig } from './types.js'
 
 /**

@@ -7,9 +7,12 @@ import { green, red, yellow, cyan, blue } from 'kolorist'
 import type { CLIConfig, GitHubToken, GitHubUser } from './types.js'
 
 // Device Flow 不需要 clientSecret
+// 需要 workflow scope，因为中心仓库 main 上含 .github/workflows/*.yml；
+// 即使 publish 不修改这些文件，从 upstream/main 衍生的分支推到 fork
+// 时 GitHub 也会校验 token 是否拥有 workflow scope。
 const GITHUB_CONFIG = {
   clientId: 'Ov23liLg5G9eD70HMXay',
-  scope: 'user repo'
+  scope: 'user repo workflow'
 }
 
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'ztools')

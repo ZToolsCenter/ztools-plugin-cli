@@ -164,8 +164,8 @@ export async function createPullRequest(
     return existingPR
   }
 
-  // 不存在则创建新PR
-  console.log(cyan('正在创建Pull Request...'))
+  // 不存在则创建新PR（默认 draft，作者准备好后自行 mark Ready for review）
+  console.log(cyan('正在创建Pull Request (draft)...'))
   const pr = await githubRequest<{ html_url: string; number: number }>(
     `/repos/${CENTRAL_REPO_OWNER}/${CENTRAL_REPO_NAME}/pulls`,
     accessToken,
@@ -174,11 +174,12 @@ export async function createPullRequest(
       title,
       head,
       base: 'main',
-      body
+      body,
+      draft: true
     }
   )
 
-  console.log(green('✓ Pull Request创建成功'))
+  console.log(green('✓ Pull Request 创建成功（draft 状态，准备好后请在网页上 Mark Ready for review）'))
   return pr
 }
 
@@ -202,6 +203,55 @@ async function findExistingPR(
   } catch (error) {
     console.error('查找PR失败:', error)
     return null
+  }
+}
+
+/**
+ * 上游中心仓库当前是否已经有 plugins/<name>/ 目录。
+ * 用于判定本次发布是 "Add" 还是 "Update"——比依赖 fork 分支状态更准，
+ * PR 合并 + 分支被自动删除后仍然能正确报告 Update。
+ */
+export async function pluginExistsUpstream(
+  pluginName: string,
+  accessToken: string
+): Promise<boolean> {
+  try {
+    await githubRequest<unknown>(
+      `/repos/${CENTRAL_REPO_OWNER}/${CENTRAL_REPO_NAME}/contents/plugins/${encodeURIComponent(pluginName)}`,
+      accessToken
+    )
+    return true
+  } catch (error) {
+    if ((error as Error).message.includes('404')) return false
+    // 任何其他错误都让上层兜底——这里返回 false 偏向"标 Add"，
+    // 避免一次网络抖动让标题变成误导性的 Update。
+    throw error
+  }
+}
+
+/**
+ * 把 fork 的 main 同步到 upstream/main（GitHub 原生 merge-upstream API）
+ * 失败时不抛——上游不可达、无网或 fork 已分叉时都让发布流程继续，
+ * 让本地 git fetch upstream 阶段决定如何处理。
+ */
+export async function syncForkMain(
+  username: string,
+  accessToken: string
+): Promise<{ ok: boolean; message?: string }> {
+  console.log(cyan('\n同步 fork 的 main 到上游...'))
+  try {
+    const result = await githubRequest<{ message: string; merge_type: string; base_branch: string }>(
+      `/repos/${username}/${CENTRAL_REPO_NAME}/merge-upstream`,
+      accessToken,
+      'POST',
+      { branch: 'main' }
+    )
+    console.log(green(`✓ ${result.merge_type === 'fast-forward' ? '已 fast-forward' : '已同步'}: ${result.message}`))
+    return { ok: true, message: result.message }
+  } catch (error) {
+    const msg = (error as Error).message
+    console.log(yellow(`⚠ fork main 同步失败（不影响后续流程）: ${msg}`))
+    return { ok: false, message: msg }
   }
 }
 

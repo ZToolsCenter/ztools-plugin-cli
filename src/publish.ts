@@ -1,6 +1,5 @@
 import { execSync } from 'node:child_process'
 import { blue, cyan, green, red, yellow } from 'kolorist'
-import fs from 'node:fs'
 import path from 'node:path'
 import prompts from 'prompts'
 import { ensureAuth } from './auth.js'
@@ -28,7 +27,8 @@ import {
   pluginExistsUpstream,
   syncForkMain
 } from './github.js'
-import type { PluginConfig } from './types.js'
+import { discoverPluginProject } from './plugin-project.js'
+import type { DiscoveredPluginProject, PluginConfig } from './types.js'
 
 /**
  * 验证插件名称格式
@@ -47,32 +47,16 @@ function validateVersion(version: string): boolean {
 }
 
 /**
- * 验证插件项目
+ * 验证插件项目。
+ *
+ * 返回完整发现结果而不只返回配置，是为了让发布流程后续复制正确的插件根目录。
  */
-function validatePluginProject(): PluginConfig {
-  const possiblePaths = [
-    path.join(process.cwd(), 'plugin.json'),
-    path.join(process.cwd(), 'public', 'plugin.json')
-  ]
+function validatePluginProject(): DiscoveredPluginProject {
+  const pluginProject = discoverPluginProject()
+  const pluginConfig = pluginProject.config
 
-  let pluginJsonPath: string | null = null
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      pluginJsonPath = p
-      break
-    }
-  }
-
-  if (!pluginJsonPath) {
-    throw new Error('未找到plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./plugin.json, ./public/plugin.json')
-  }
-
-  let pluginConfig: PluginConfig
-  try {
-    const content = fs.readFileSync(pluginJsonPath, 'utf-8')
-    pluginConfig = JSON.parse(content)
-  } catch (error) {
-    throw new Error(`读取plugin.json失败: ${(error as Error).message}`)
+  for (const warning of pluginProject.warnings) {
+    console.log(yellow(`⚠ ${warning}`))
   }
 
   if (!pluginConfig.name) {
@@ -121,7 +105,7 @@ function validatePluginProject(): PluginConfig {
     )
   }
 
-  return pluginConfig
+  return pluginProject
 }
 
 /**
@@ -313,7 +297,8 @@ export async function publish(): Promise<void> {
   try {
     // 1. 验证插件项目
     console.log(cyan('📋 验证插件项目...'))
-    const pluginConfig = validatePluginProject()
+    const pluginProject = validatePluginProject()
+    const pluginConfig = pluginProject.config
     const displayName = pluginConfig.title || pluginConfig.name
     console.log(green(`✓ 插件: ${displayName} (${pluginConfig.name})`))
     console.log(green(`✓ 描述: ${pluginConfig.description || 'N/A'}`))
@@ -352,8 +337,8 @@ export async function publish(): Promise<void> {
     // 7. 切换到 plugin/<name> 分支（仅用于决定从哪里出发追加 commit）
     prepareBranch(pluginConfig.name)
 
-    // 8. 把工作目录文件复制进 plugins/<name>/
-    copyPluginFiles(pluginConfig.name, process.cwd())
+    // 8. 把插件根目录文件复制进 plugins/<name>/
+    copyPluginFiles(pluginConfig.name, pluginProject.pluginRoot, { allowDist: true })
 
     // 9. 组装 commit 标题 / 正文 / PR 标题
     const commitSubjects = getLocalCommitSubjectsSinceLastPublish()

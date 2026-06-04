@@ -1,5 +1,5 @@
 {
-  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
+  "$schema": "../node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
   "name": "{{PLUGIN_NAME}}",
   "title": "{{PLUGIN_TITLE}}",
   "description": "{{DESCRIPTION}}",

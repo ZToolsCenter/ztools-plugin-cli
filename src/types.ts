@@ -61,3 +61,14 @@ export interface CommitInfo {
   date: string
   message: string
 }
+
+export type PluginLayout = 'src-ztools' | 'root' | 'public'
+
+export interface DiscoveredPluginProject {
+  projectRoot: string
+  pluginRoot: string
+  pluginJsonPath: string
+  layout: PluginLayout
+  config: PluginConfig
+  warnings: string[]
+}

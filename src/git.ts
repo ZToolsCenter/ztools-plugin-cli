@@ -257,7 +257,8 @@ export function mirrorForkPluginToCwd(pluginName: string, destDir: string): void
   if (!fs.existsSync(sourceDir)) {
     throw new Error(`fork 仓库里找不到 plugins/${pluginName}/，PR 分支可能已被删除或为空`)
   }
-  copyDirRecursive(sourceDir, destDir)
+  fs.mkdirSync(destDir, { recursive: true })
+  copyDirRecursive(sourceDir, destDir, { allowDist: true })
 }
 
 /**

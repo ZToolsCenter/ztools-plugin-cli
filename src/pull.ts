@@ -1,6 +1,4 @@
 import { execSync } from 'node:child_process'
-import fs from 'node:fs'
-import path from 'node:path'
 import { blue, cyan, green, red, yellow } from 'kolorist'
 import { ensureAuth } from './auth.js'
 import {
@@ -15,29 +13,7 @@ import {
   remotePluginBranchExists
 } from './git.js'
 import { ensureFork, getCurrentUser } from './github.js'
-import type { PluginConfig } from './types.js'
-
-function readPluginConfig(): PluginConfig {
-  const candidates = [
-    path.join(process.cwd(), 'plugin.json'),
-    path.join(process.cwd(), 'public', 'plugin.json')
-  ]
-  let pluginJsonPath: string | null = null
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      pluginJsonPath = p
-      break
-    }
-  }
-  if (!pluginJsonPath) {
-    throw new Error(
-      '未找到 plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./plugin.json, ./public/plugin.json'
-    )
-  }
-  const cfg = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf-8')) as PluginConfig
-  if (!cfg.name) throw new Error('plugin.json 中缺少 name 字段')
-  return cfg
-}
+import { discoverPluginProject } from './plugin-project.js'
 
 function runInCwd(cmd: string): void {
   execSync(cmd, { cwd: process.cwd(), stdio: ['pipe', 'inherit', 'inherit'] })
@@ -96,7 +72,14 @@ export async function pullContributions(): Promise<void> {
         'find no ztools-last-publish 标签——请先 ztools publish 成功一次后再使用 pull-contributions。'
       )
     }
-    const pluginConfig = readPluginConfig()
+    const pluginProject = discoverPluginProject()
+    const pluginConfig = pluginProject.config
+
+    for (const warning of pluginProject.warnings) {
+      console.log(yellow(`⚠ ${warning}`))
+    }
+
+    if (!pluginConfig.name) throw new Error('plugin.json 中缺少 name 字段')
     const displayName = pluginConfig.title || pluginConfig.name
     console.log(green(`✓ 插件: ${displayName} (${pluginConfig.name})`))
     console.log(green(`✓ 当前分支: ${originalBranch}`))
@@ -126,7 +109,7 @@ export async function pullContributions(): Promise<void> {
     runInCwd(`git checkout -b "${tempBranch}" "${baseSha}"`)
 
     // 7. 把 fork 当前 plugin 内容镜像到工作树并提交（这就是 theirs 的内容快照）
-    mirrorForkPluginToCwd(pluginConfig.name, cwd)
+    mirrorForkPluginToCwd(pluginConfig.name, pluginProject.pluginRoot)
     runInCwd('git add -A')
     const hasForkDiff = !tryRunInCwd('git diff --cached --quiet')
 

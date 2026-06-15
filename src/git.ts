@@ -36,6 +36,14 @@ const COPY_IGNORE_FILE_PATTERNS: RegExp[] = [
   /^yarn-error\.log.*$/
 ]
 
+interface CopyDirOptions {
+  allowDist: boolean
+}
+
+interface CopyPluginFilesOptions {
+  allowDist?: boolean
+}
+
 /**
  * 执行Git命令
  */
@@ -201,10 +209,21 @@ export function prepareBranch(pluginName: string): { existedRemotely: boolean; b
   return { existedRemotely, branchName }
 }
 
-function shouldIgnoreEntry(name: string, isDir: boolean): boolean {
+/**
+ * 判断复制时是否忽略目录或文件。
+ *
+ * dist 在源码项目中通常是临时产物，但在 src-ztools 最新结构中是生产入口目录，
+ * 因此复制插件根目录时需要按上下文允许 dist。
+ */
+function shouldIgnoreEntry(name: string, isDir: boolean, options: CopyDirOptions): boolean {
+  if (isDir && name === 'dist' && options.allowDist) {
+    return false
+  }
+
   if (isDir) {
     return COPY_IGNORE_DIRS.has(name)
   }
+
   return COPY_IGNORE_FILE_PATTERNS.some((re) => re.test(name))
 }
 
@@ -238,14 +257,19 @@ export function mirrorForkPluginToCwd(pluginName: string, destDir: string): void
   if (!fs.existsSync(sourceDir)) {
     throw new Error(`fork 仓库里找不到 plugins/${pluginName}/，PR 分支可能已被删除或为空`)
   }
-  copyDirRecursive(sourceDir, destDir)
+  fs.mkdirSync(destDir, { recursive: true })
+  copyDirRecursive(sourceDir, destDir, { allowDist: true })
 }
 
 /**
  * 把用户工作目录的插件文件复制到 fork 仓库的 plugins/<name>/ 下。
  * 复制前先清空目标目录，确保用户本地删除的文件也会反映到 fork。
  */
-export function copyPluginFiles(pluginName: string, sourceDir: string): void {
+export function copyPluginFiles(
+  pluginName: string,
+  sourceDir: string,
+  options: CopyPluginFilesOptions = {}
+): void {
   const destDir = path.join(FORK_REPO_DIR, 'plugins', pluginName)
   console.log(cyan(`\n同步插件文件到 plugins/${pluginName}/ ...`))
 
@@ -254,19 +278,23 @@ export function copyPluginFiles(pluginName: string, sourceDir: string): void {
   }
   fs.mkdirSync(destDir, { recursive: true })
 
-  copyDirRecursive(sourceDir, destDir)
+  copyDirRecursive(sourceDir, destDir, { allowDist: options.allowDist ?? false })
   console.log(green('✓ 文件同步完成'))
 }
 
-function copyDirRecursive(src: string, dest: string): void {
+function copyDirRecursive(
+  src: string,
+  dest: string,
+  options: CopyDirOptions = { allowDist: false }
+): void {
   const entries = fs.readdirSync(src, { withFileTypes: true })
   for (const entry of entries) {
-    if (shouldIgnoreEntry(entry.name, entry.isDirectory())) continue
+    if (shouldIgnoreEntry(entry.name, entry.isDirectory(), options)) continue
     const srcPath = path.join(src, entry.name)
     const destPath = path.join(dest, entry.name)
     if (entry.isDirectory()) {
       fs.mkdirSync(destPath, { recursive: true })
-      copyDirRecursive(srcPath, destPath)
+      copyDirRecursive(srcPath, destPath, options)
     } else if (entry.isSymbolicLink()) {
       const link = fs.readlinkSync(srcPath)
       fs.symlinkSync(link, destPath)

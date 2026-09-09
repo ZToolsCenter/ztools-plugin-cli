@@ -179,7 +179,9 @@ export async function createPullRequest(
     }
   )
 
-  console.log(green('✓ Pull Request 创建成功（draft 状态，准备好后请在网页上 Mark Ready for review）'))
+  console.log(
+    green('✓ Pull Request 创建成功（draft 状态，准备好后请在网页上 Mark Ready for review）')
+  )
   return pr
 }
 
@@ -240,13 +242,18 @@ export async function syncForkMain(
 ): Promise<{ ok: boolean; message?: string }> {
   console.log(cyan('\n同步 fork 的 main 到上游...'))
   try {
-    const result = await githubRequest<{ message: string; merge_type: string; base_branch: string }>(
-      `/repos/${username}/${CENTRAL_REPO_NAME}/merge-upstream`,
-      accessToken,
-      'POST',
-      { branch: 'main' }
+    const result = await githubRequest<{
+      message: string
+      merge_type: string
+      base_branch: string
+    }>(`/repos/${username}/${CENTRAL_REPO_NAME}/merge-upstream`, accessToken, 'POST', {
+      branch: 'main'
+    })
+    console.log(
+      green(
+        `✓ ${result.merge_type === 'fast-forward' ? '已 fast-forward' : '已同步'}: ${result.message}`
+      )
     )
-    console.log(green(`✓ ${result.merge_type === 'fast-forward' ? '已 fast-forward' : '已同步'}: ${result.message}`))
     return { ok: true, message: result.message }
   } catch (error) {
     const msg = (error as Error).message

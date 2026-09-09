@@ -25,9 +25,10 @@
 
 ```
 .
-├── logo.png              # 插件图标
-├── plugin.json           # 插件配置文件
-├── preload.js            # Preload 脚本（主要逻辑）
+├── src-ztools/           # 可直接加载和发布的 ZTools 插件目录
+│   ├── logo.png          # 插件图标
+│   ├── plugin.json       # 插件配置文件
+│   └── preload.js        # Preload 脚本（主要逻辑）
 ├── package.json          # 项目依赖
 └── README.md             # 项目文档
 ```
@@ -42,11 +43,11 @@ npm install
 
 ### 开发模式
 
-直接编辑 `preload.js` 文件，保存后 ZTools 会自动重新加载插件。
+直接编辑 `src-ztools/preload.js` 文件，保存后 ZTools 会自动重新加载插件。
 
 ### 测试插件
 
-1. 将插件目录复制到 ZTools 插件文件夹
+1. 将 `src-ztools` 目录复制到 ZTools 插件文件夹
 2. 重启 ZTools 或手动刷新插件列表
 3. 输入触发指令测试功能
 
@@ -54,7 +55,7 @@ npm install
 
 ### 1. 插件配置
 
-编辑 `plugin.json` 文件：
+编辑 `src-ztools/plugin.json` 文件：
 
 ```json
 {

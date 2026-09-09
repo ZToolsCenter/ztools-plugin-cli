@@ -4,8 +4,8 @@
   "title": "{{PLUGIN_TITLE}}",
   "description": "{{DESCRIPTION}}",
   "author": "{{AUTHOR}}",
-  "version": "1.0.0",
-  "main": "index.html",
+  "version": "0.0.1",
+  "main": "dist/index.html",
   "preload": "preload/services.js",
   "logo": "logo.png",
   "development": {

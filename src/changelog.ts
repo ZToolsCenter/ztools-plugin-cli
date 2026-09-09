@@ -104,6 +104,35 @@ export function readChangelogSection(version: string, dir: string = process.cwd(
 }
 
 /**
+ * 严格校验 CHANGELOG.md 是否包含指定版本的标准版本节。
+ * 标题必须为 `## x.y.z - YYYY-MM-DD`，且该版本节正文不能为空。
+ */
+export function hasStrictChangelogSection(version: string, dir: string = process.cwd()): boolean {
+  const file = findChangelogPath(dir)
+  if (!file) return false
+
+  let content: string
+  try {
+    content = fs.readFileSync(file, 'utf-8')
+  } catch {
+    return false
+  }
+
+  const escaped = version.replace(/[.+*?^$()|[\]\\]/g, '\\$&')
+  const heading = new RegExp(`^##\\s+${escaped}\\s+-\\s+\\d{4}-\\d{2}-\\d{2}\\s*$`)
+  const lines = content.split(/\r?\n/)
+  const start = lines.findIndex((line) => heading.test(line))
+  if (start < 0) return false
+
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^#{1,6}\s+/.test(lines[i])) {
+      return lines.slice(start + 1, i).some((line) => line.trim().length > 0)
+    }
+  }
+  return lines.slice(start + 1).some((line) => line.trim().length > 0)
+}
+
+/**
  * 把模板写入临时文件，用 $EDITOR / $VISUAL / vi 打开让用户录入；
  * 用户保存退出后剥掉以 # 开头的注释行，去掉首尾空白返回。
  *
@@ -165,7 +194,11 @@ export function promptChangelogInEditor(version: string, displayName: string): s
  *  - 若没有 H1 → 直接插在文件最前
  * 返回写入的绝对路径。
  */
-export function writeChangelogEntry(version: string, entry: string, dir: string = process.cwd()): string {
+export function writeChangelogEntry(
+  version: string,
+  entry: string,
+  dir: string = process.cwd()
+): string {
   const target = findChangelogPath(dir) || path.join(dir, 'CHANGELOG.md')
   const date = new Date().toISOString().slice(0, 10)
   const newSection = `## ${version} - ${date}\n\n${entry.trim()}\n`

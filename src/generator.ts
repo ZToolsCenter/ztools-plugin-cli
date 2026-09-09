@@ -35,7 +35,8 @@ export async function generateProject(options: ProjectOptions): Promise<void> {
     PLUGIN_NAME: pluginName,
     PLUGIN_TITLE: pluginTitle,
     DESCRIPTION: description,
-    AUTHOR: author
+    AUTHOR: author,
+    CHANGELOG_DATE: new Date().toISOString().slice(0, 10)
   }
 
   replaceTemplateVarsInDir(targetDir, vars)

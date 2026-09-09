@@ -25,7 +25,7 @@
 
 ```
 .
-├── public/
+├── src-ztools/
 │   ├── logo.png              # 插件图标
 │   ├── plugin.json           # 插件配置文件
 │   └── preload/              # Preload 脚本目录
@@ -73,13 +73,13 @@ npm run dev
 npm run build
 ```
 
-构建产物将输出到 `dist/` 目录。
+构建产物将输出到 `src-ztools/dist/` 目录，`src-ztools/` 是完整的 ZTools 插件目录。
 
 ## 📖 开发指南
 
 ### 1. 修改插件配置
 
-编辑 `public/plugin.json` 文件：
+编辑 `src-ztools/plugin.json` 文件：
 
 ```json
 {
@@ -159,7 +159,7 @@ function App() {
 
 #### 扩展 Preload 服务
 
-编辑 `public/preload/services.js`：
+编辑 `src-ztools/preload/services.js`：
 
 ```javascript
 const fs = require('fs')
@@ -292,7 +292,7 @@ npm run build
 
 ### 2. 测试构建产物
 
-将 `dist/` 目录中的所有文件复制到 ZTools 插件目录进行测试。
+将 `src-ztools/` 目录作为完整插件目录复制到 ZTools 插件目录进行测试。
 
 ### 3. 发布到插件市场
 
@@ -338,11 +338,11 @@ A: 使用 `npm run dev` 启动开发服务器，在插件界面中点击插件�
 
 ### Q: 如何访问 Node.js 能力？
 
-A: 通过 `public/preload/services.js` 文件扩展服务，然后在组件中使用 `window.services` 调用。
+A: 通过 `src-ztools/preload/services.js` 文件扩展服务，然后在组件中使用 `window.services` 调用。
 
 ### Q: 插件图标不显示？
 
-A: 确保 `public/logo.png` 文件存在，且在 `plugin.json` 中正确配置了 `logo` 字段。
+A: 确保 `src-ztools/logo.png` 文件存在，且在 `plugin.json` 中正确配置了 `logo` 字段。
 
 ### Q: 如何使用第三方 UI 库？
 

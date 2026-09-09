@@ -1,14 +1,10 @@
-import { execSync } from 'node:child_process'
 import { blue, cyan, green, red, yellow } from 'kolorist'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import prompts from 'prompts'
+import { fileURLToPath } from 'node:url'
 import { ensureAuth } from './auth.js'
-import {
-  promptChangelogInEditor,
-  readChangelogSection,
-  writeChangelogEntry
-} from './changelog.js'
+import { hasStrictChangelogSection, readChangelogSection } from './changelog.js'
 import {
   commitPluginChanges,
   copyPluginFiles,
@@ -30,6 +26,13 @@ import {
 } from './github.js'
 import type { PluginConfig } from './types.js'
 
+const CLI_VERSION = JSON.parse(
+  fs.readFileSync(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json'),
+    'utf-8'
+  )
+).version as string
+
 /**
  * 验证插件名称格式
  * 只允许小写字母和连字符 "-"
@@ -47,10 +50,20 @@ function validateVersion(version: string): boolean {
 }
 
 /**
+ * 拒绝模板自带的默认图标，避免插件以占位图标提交。
+ */
+function isDefaultLogo(logoPath: string): boolean {
+  if (!fs.existsSync(logoPath)) return false
+  const digest = crypto.createHash('sha256').update(fs.readFileSync(logoPath)).digest('hex')
+  return digest === '8912367f96e8b21c9bf5e138415347c61eca8d93abccd59650a6b81aaecbd0f6'
+}
+
+/**
  * 验证插件项目
  */
 function validatePluginProject(): PluginConfig {
   const possiblePaths = [
+    path.join(process.cwd(), 'src-ztools', 'plugin.json'),
     path.join(process.cwd(), 'plugin.json'),
     path.join(process.cwd(), 'public', 'plugin.json')
   ]
@@ -64,7 +77,9 @@ function validatePluginProject(): PluginConfig {
   }
 
   if (!pluginJsonPath) {
-    throw new Error('未找到plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./plugin.json, ./public/plugin.json')
+    throw new Error(
+      '未找到plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./src-ztools/plugin.json, ./plugin.json, ./public/plugin.json'
+    )
   }
 
   let pluginConfig: PluginConfig
@@ -87,19 +102,32 @@ function validatePluginProject(): PluginConfig {
     throw new Error('plugin.json中缺少version字段（版本号）')
   }
 
+  const logoValue = typeof pluginConfig.logo === 'string' ? pluginConfig.logo : 'logo.png'
+  const logoPath = path.resolve(path.dirname(pluginJsonPath), logoValue)
+  if (isDefaultLogo(logoPath)) {
+    throw new Error('logo不能使用默认图标，可以使用ai生成svg转png图标')
+  }
+
   if (!validatePluginName(pluginConfig.name)) {
     throw new Error(
       `插件名称格式不正确: "${pluginConfig.name}"\n` +
-      '插件名称只允许小写字母、数字和连字符 "-"，且必须以字母开头，以字母或数字结尾\n' +
-      '示例: my-plugin, hello-world, plugin-123'
+        '插件名称只允许小写字母、数字和连字符 "-"，且必须以字母开头，以字母或数字结尾\n' +
+        '示例: my-plugin, hello-world, plugin-123'
     )
   }
 
   if (!validateVersion(pluginConfig.version)) {
     throw new Error(
       `版本号格式不正确: "${pluginConfig.version}"\n` +
-      '版本号必须是语义化版本号格式 (major.minor.patch)\n' +
-      '示例: 1.0.0, 1.2.3, 2.10.5'
+        '版本号必须是语义化版本号格式 (major.minor.patch)\n' +
+        '示例: 1.0.0, 1.2.3, 2.10.5'
+    )
+  }
+
+  if (!hasStrictChangelogSection(pluginConfig.version, process.cwd())) {
+    throw new Error(
+      `CHANGELOG.md 缺少版本 ${pluginConfig.version} 的有效更新日志。\n` +
+        `必须使用格式：## ${pluginConfig.version} - YYYY-MM-DD，并填写至少一行正文后再提交。`
     )
   }
 
@@ -117,7 +145,7 @@ function validatePluginProject(): PluginConfig {
     const more = dirty.length > 8 ? `\n  ... 还有 ${dirty.length - 8} 项未列出` : ''
     throw new Error(
       `工作区存在未提交的改动，请先 commit 或 discard 后再发布：\n  ${preview}${more}\n\n` +
-      `提示：git add -A && git commit -m "your changes"  或  git restore --staged . && git checkout -- .`
+        `提示：git add -A && git commit -m "your changes"  或  git restore --staged . && git checkout -- .`
     )
   }
 
@@ -134,93 +162,6 @@ function parseAuthor(raw: string | undefined): { name?: string; email?: string }
     return { name: m[1].trim(), email: m[2].trim() }
   }
   return { name: raw.trim() }
-}
-
-/**
- * 检测 CHANGELOG.md 是否覆盖当前版本；不覆盖且环境是交互式 TTY 时，
- * 询问用户：编辑录入 / 跳过 / 中止。录入完成后可写回 CHANGELOG.md
- * 并自动 git commit，确保 publish 流程后续仍是干净工作树。
- *
- * 返回值：
- *   - 字符串：将作为 PR body 的"本次变更"段直接使用（来自用户输入或 CHANGELOG）
- *   - null：用户选择跳过或非 TTY 环境，调用方走原退化逻辑
- *   - 抛错：用户选择中止
- */
-async function ensureChangelog(version: string, displayName: string): Promise<string | null> {
-  const found = readChangelogSection(version, process.cwd())
-  if (found) return found
-
-  const isTTY = process.stdin.isTTY && process.stdout.isTTY
-  if (!isTTY) {
-    // CI / 非交互场景：静默退化（让 PR body 用 commit subjects 或 placeholder）
-    return null
-  }
-
-  console.log()
-  console.log(yellow(`📝 未在 CHANGELOG.md 中找到 v${version} 的变更说明`))
-  const { action } = await prompts(
-    {
-      type: 'select',
-      name: 'action',
-      message: '选择处理方式',
-      choices: [
-        { title: '现在编辑（打开 $EDITOR 录入本次变更）', value: 'edit' },
-        { title: '跳过（PR 中显示 placeholder，稍后在网页填）', value: 'skip' },
-        { title: '中止发布', value: 'abort' }
-      ],
-      initial: 0
-    },
-    { onCancel: () => process.exit(130) }
-  )
-
-  if (action === 'abort') {
-    throw new Error('用户中止发布')
-  }
-  if (action === 'skip') return null
-
-  // action === 'edit'
-  let entry: string | null = null
-  try {
-    entry = promptChangelogInEditor(version, displayName)
-  } catch (e) {
-    console.log(yellow(`⚠ 录入失败: ${(e as Error).message}`))
-    return null
-  }
-  if (!entry) {
-    console.log(yellow('⚠ 未捕获到有效内容，按跳过处理'))
-    return null
-  }
-
-  console.log(cyan('\n你录入的内容：'))
-  for (const line of entry.split('\n')) console.log(cyan(`  ${line}`))
-  console.log()
-
-  const { saveToFile } = await prompts(
-    {
-      type: 'confirm',
-      name: 'saveToFile',
-      message: '把这一节写入 CHANGELOG.md（同时自动 git commit）？',
-      initial: true
-    },
-    { onCancel: () => process.exit(130) }
-  )
-
-  if (saveToFile) {
-    const target = writeChangelogEntry(version, entry, process.cwd())
-    const rel = path.relative(process.cwd(), target) || target
-    try {
-      execSync(`git add "${rel}"`, { cwd: process.cwd() })
-      execSync(`git commit -m "chore(changelog): add v${version} entry"`, {
-        cwd: process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
-      console.log(green(`✓ CHANGELOG.md 已更新并 commit`))
-    } catch (e) {
-      console.log(yellow(`⚠ 自动 commit 失败（不影响发布）: ${(e as Error).message}`))
-    }
-  }
-
-  return entry
 }
 
 /**
@@ -278,6 +219,7 @@ function renderPRBody(
 - **名称**: ${displayName}
 - **插件ID**: ${pluginConfig.name}
 - **版本**: ${pluginConfig.version}
+- **CLI版本**: ${CLI_VERSION}
 - **描述**: ${pluginConfig.description || 'N/A'}
 - **作者**: ${pluginConfig.author || 'N/A'}
 - **类型**: ${action}
@@ -319,9 +261,8 @@ export async function publish(): Promise<void> {
     console.log(green(`✓ 描述: ${pluginConfig.description || 'N/A'}`))
     console.log(green(`✓ 版本: ${pluginConfig.version}\n`))
 
-    // 1.5 CHANGELOG：当前版本节缺失时，TTY 下交互录入；可选写回并自动 commit。
-    //     必须在 fork-clone 之前完成，确保后续 publish 看到的是干净工作树。
-    const changelog = await ensureChangelog(pluginConfig.version, displayName)
+    // 1.5 CHANGELOG 已在项目校验阶段严格检查；缺失或格式错误会直接终止发布。
+    const changelog = readChangelogSection(pluginConfig.version, process.cwd())
 
     // 2. GitHub 认证
     console.log(cyan('🔐 GitHub认证...'))
@@ -380,15 +321,11 @@ export async function publish(): Promise<void> {
       // 10. 推送（普通 push，不 force）
       await pushPluginBranch(pluginConfig.name)
     } else {
-      console.log(
-        yellow('⚠ fork plugin 分支与本地内容一致，没有新 commit 可追加')
-      )
+      console.log(yellow('⚠ fork plugin 分支与本地内容一致，没有新 commit 可追加'))
       console.log(yellow('  → 继续检查 PR 状态'))
     }
 
-    // 11. 渲染 PR description，注入"本次变更"内容
-    //     changelog 来自 ensureChangelog（CHANGELOG 现存节 / 用户交互录入）。
-    //     都没有时退化用 commit subjects；都没有则模板里给 placeholder 让用户在网页填。
+    // 11. 渲染 PR description，注入项目中手动维护的 CHANGELOG 版本节。
     if (changelog) {
       console.log(green(`✓ 已注入 v${pluginConfig.version} 变更说明到 PR description\n`))
     }
@@ -408,7 +345,9 @@ export async function publish(): Promise<void> {
       try {
         tagLastPublishLocally()
       } catch (e) {
-        console.log(yellow(`⚠ 未能打 ztools-last-publish 标签（不影响发布）: ${(e as Error).message}`))
+        console.log(
+          yellow(`⚠ 未能打 ztools-last-publish 标签（不影响发布）: ${(e as Error).message}`)
+        )
       }
     }
 

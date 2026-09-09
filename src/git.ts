@@ -54,7 +54,10 @@ function execGit(command: string, cwd?: string): string {
   }
 }
 
-function tryGit(command: string, cwd?: string): { ok: true; output: string } | { ok: false; error: string } {
+function tryGit(
+  command: string,
+  cwd?: string
+): { ok: true; output: string } | { ok: false; error: string } {
   try {
     return { ok: true, output: execGit(command, cwd) }
   } catch (error) {
@@ -83,7 +86,10 @@ export function hasCommits(dir: string = process.cwd()): boolean {
 export function getWorkingTreeStatus(dir: string = process.cwd()): string[] {
   const r = tryGit('git status --porcelain', dir)
   if (!r.ok) return []
-  return r.output.split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+  return r.output
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
 }
 
 function buildAuthUrl(forkUrl: string, username: string, accessToken: string): string {
@@ -146,7 +152,10 @@ function ensureUpstreamRemote(): void {
  *  - 否则：基于 upstream/main 新建。
  * 返回值用于上层判断是首次发布还是后续发布。
  */
-export function prepareBranch(pluginName: string): { existedRemotely: boolean; branchName: string } {
+export function prepareBranch(pluginName: string): {
+  existedRemotely: boolean
+  branchName: string
+} {
   const branchName = `plugin/${pluginName}`
   console.log(cyan(`\n准备分支: ${branchName}`))
 
@@ -213,10 +222,7 @@ function shouldIgnoreEntry(name: string, isDir: boolean): boolean {
  */
 export function remotePluginBranchExists(pluginName: string): boolean {
   const branchName = `plugin/${pluginName}`
-  return tryGit(
-    `git ls-remote --exit-code --heads origin "${branchName}"`,
-    FORK_REPO_DIR
-  ).ok
+  return tryGit(`git ls-remote --exit-code --heads origin "${branchName}"`, FORK_REPO_DIR).ok
 }
 
 /**
@@ -285,7 +291,9 @@ export function commitPluginChanges(
   title: string,
   options: { body?: string; authorName?: string; authorEmail?: string } = {}
 ): boolean {
-  execGit(`git add "plugins/${pluginName}"`, FORK_REPO_DIR)
+  // fork 仓库可能启用了 sparse-checkout；插件目录通常不在稀疏范围内，
+  // 使用 --sparse 明确允许将本次同步的插件目录加入暂存区。
+  execGit(`git add --sparse "plugins/${pluginName}"`, FORK_REPO_DIR)
 
   const diff = tryGit('git diff --cached --quiet', FORK_REPO_DIR)
   if (diff.ok) {
@@ -381,9 +389,7 @@ export function getCurrentBranchName(dir: string = process.cwd()): string | null
  * 取本地插件仓库自上次成功 publish 以来的 commit subject 列表。
  * 没打过 ztools-last-publish 标签时退化为整段历史，按时间顺序返回。
  */
-export function getLocalCommitSubjectsSinceLastPublish(
-  dir: string = process.cwd()
-): string[] {
+export function getLocalCommitSubjectsSinceLastPublish(dir: string = process.cwd()): string[] {
   const tag = getLastPublishCommit(dir)
   const range = tag ? 'ztools-last-publish..HEAD' : ''
   const r = tryGit(`git log --reverse --pretty=format:%s ${range}`, dir)

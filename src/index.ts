@@ -21,7 +21,9 @@ async function main(): Promise<void> {
     console.log('Commands:')
     console.log('  create <project-name>   Create a new plugin project')
     console.log('  publish                 Publish plugin to ZTools-plugins repository')
-    console.log('  pull-contributions      Pull reviewer/co-author commits on the PR branch back to local repo\n')
+    console.log(
+      '  pull-contributions      Pull reviewer/co-author commits on the PR branch back to local repo\n'
+    )
     console.log('Examples:')
     console.log('  ztools create my-plugin')
     console.log('  ztools publish')

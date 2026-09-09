@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+src-ztools/dist
 dist-ssr
 *.local
 

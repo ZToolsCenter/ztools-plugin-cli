@@ -19,6 +19,7 @@ import type { PluginConfig } from './types.js'
 
 function readPluginConfig(): PluginConfig {
   const candidates = [
+    path.join(process.cwd(), 'src-ztools', 'plugin.json'),
     path.join(process.cwd(), 'plugin.json'),
     path.join(process.cwd(), 'public', 'plugin.json')
   ]
@@ -31,7 +32,7 @@ function readPluginConfig(): PluginConfig {
   }
   if (!pluginJsonPath) {
     throw new Error(
-      '未找到 plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./plugin.json, ./public/plugin.json'
+      '未找到 plugin.json，请确保在插件项目根目录下执行此命令\n支持的路径：./src-ztools/plugin.json, ./plugin.json, ./public/plugin.json'
     )
   }
   const cfg = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf-8')) as PluginConfig
@@ -114,7 +115,9 @@ export async function pullContributions(): Promise<void> {
 
     // 4. 远端 PR 分支存在吗
     if (!remotePluginBranchExists(pluginConfig.name)) {
-      console.log(yellow(`\n⚠ 远端 fork 上没有 plugin/${pluginConfig.name} 分支，无 contributions 可拉。`))
+      console.log(
+        yellow(`\n⚠ 远端 fork 上没有 plugin/${pluginConfig.name} 分支，无 contributions 可拉。`)
+      )
       return
     }
 
@@ -154,7 +157,9 @@ export async function pullContributions(): Promise<void> {
       console.log()
       console.log(red('❌ 合并出现冲突，需要你手工解决。'))
       console.log(yellow('  当前处于合并未完成状态：'))
-      console.log(yellow(`  - 临时分支: ${tempBranch}（解决后可删除：git branch -D ${tempBranch}）`))
+      console.log(
+        yellow(`  - 临时分支: ${tempBranch}（解决后可删除：git branch -D ${tempBranch}）`)
+      )
       console.log(yellow('  解决步骤：'))
       console.log(yellow('    1) 编辑冲突文件 → git add <文件>'))
       console.log(yellow('    2) git commit  完成合并'))

@@ -51,7 +51,7 @@ ztools publish
 **前置条件：**
 
 1. 在插件项目根目录执行
-2. 项目包含 `plugin.json` 文件
+2. 项目包含 `src-ztools/plugin.json`、根目录 `plugin.json` 或 `public/plugin.json` 文件
 3. 已初始化 Git 仓库（`git init`）
 4. 至少有一次提交记录
 
